@@ -1,3 +1,6 @@
 [submodule "icl"]
 	path = icl
 	url = https://github.com/brasserie/icl
+[submodule "osb-library"]
+	path = osb-library
+	url = https://github.com/OpenStoryBox/osb-library
