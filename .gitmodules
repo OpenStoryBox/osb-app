@@ -1,0 +1,3 @@
+[submodule "icl"]
+	path = icl
+	url = https://github.com/brasserie/icl
