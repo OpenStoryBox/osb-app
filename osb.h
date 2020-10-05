@@ -5,11 +5,11 @@
 #include "packarchive.h"
 #include "lcdscreen.h" // LCD adapter from C to QML
 
-class Sunii : public QObject
+class Osb : public QObject
 {
     Q_OBJECT
 public:
-    Sunii(LcdScreen &lcd);
+    Osb(LcdScreen &lcd);
 
     Q_INVOKABLE void openFile();
 

@@ -8,7 +8,7 @@
 
 #include "packarchive.h"
 #include "lcdscreen.h" // LCD adapter from C to QML
-#include "sunii.h"
+#include "osb.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,16 +16,14 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
-    QIcon::setThemeName("sunii");
-
     LcdScreen lcd;
-    Sunii sunii(lcd);
+    Osb osb(lcd);
 
     QQmlApplicationEngine engine;
 
     QQmlContext * ctxt = engine.rootContext();
     ctxt->setContextProperty("lcd", &lcd); // on rend cet objet accessible en QML
-    ctxt->setContextProperty("sunii", &sunii);
+    ctxt->setContextProperty("osb", &osb);
 
     const QUrl url(QStringLiteral("qrc:/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,

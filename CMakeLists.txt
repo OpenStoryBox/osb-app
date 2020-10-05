@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(sunii-app LANGUAGES CXX)
+project(osb-app LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(../libs/icl build_icl)
+add_subdirectory(icl build_icl)
 
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
@@ -30,24 +30,24 @@ add_subdirectory(../libs/icl build_icl)
 find_package(Qt5 COMPONENTS Core Quick REQUIRED)
 
 if(ANDROID)
-    add_library(sunii-app SHARED
+    add_library(osb-app SHARED
       main.cpp
       packarchive.cpp
       lcdscreen.cpp
-      sunii.cpp
+      osb.cpp
       qml.qrc
     )
 else()
-    add_executable(sunii-app
+    add_executable(osb-app
       main.cpp
       packarchive.cpp
       lcdscreen.cpp
-      sunii.cpp
+      osb.cpp
       qml.qrc
     )
 endif()
 
-target_compile_definitions(sunii-app
+target_compile_definitions(osb-app
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-target_link_libraries(sunii-app
+target_link_libraries(osb-app
   PRIVATE Qt5::Core Qt5::Quick icl)

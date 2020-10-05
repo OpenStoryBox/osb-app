@@ -31,7 +31,7 @@ Rectangle {
     }
 
     Component.onCompleted: {
-        sunii.openFile();
+        osb.openFile();
     }
 
     Connections
