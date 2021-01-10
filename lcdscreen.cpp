@@ -47,6 +47,46 @@ QString LcdScreen::getImage()
     return image;
 }
 
+#define DELTA 0x9e3779b9
+#define MX (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)))
+
+void btea(uint32_t *v, int n, uint32_t const key[4]) {
+    uint32_t y, z, sum;
+    unsigned p, rounds, e;
+    if (n > 1) {          /* Coding Part */
+        rounds = 6 + 52/n;
+        sum = 0;
+        z = v[n-1];
+        do {
+            sum += DELTA;
+            e = (sum >> 2) & 3;
+            for (p=0; p < (n-1); p++) {
+                y = v[p+1];
+                z = v[p] += MX;
+            }
+            y = v[0];
+            z = v[n-1] += MX;
+        } while (--rounds);
+    } else if (n < -1) {  /* Decoding Part */
+        n = -n;
+        //rounds = 6 + 52/n;
+        rounds = 0x34 / (n >>1) +1;
+        sum = rounds*DELTA;
+        y = v[0];
+        do {
+            e = (sum >> 2) & 3;
+            for (p=n-1; p>0; p--) {
+                z = v[p-1];
+                y = v[p] -= MX;
+            }
+            z = v[n-1];
+            y = v[0] -= MX;
+            sum -= DELTA;
+        } while (--rounds);
+    }
+}
+
+const uint32_t key[4] = {0x91bd7a0a, 0xa75440a9, 0xbbd49d6c, 0xe0dcc0e3};
 
 void LcdScreen::SetImage(const std::string &bytes)
 {
@@ -64,6 +104,11 @@ void LcdScreen::SetImage(const std::string &bytes)
     uint32_t compressedSize = bytes.length() - 512;
 
     uint8_t compressed[compressedSize];
+
+    uint8_t bmpImage[512 + 320*240];
+
+    memcpy(bmpImage, bytes.data(), 512);
+    btea((uint32_t*) bmpImage, -128, key);
 
     memcpy(compressed, bytes.data() + 512, compressedSize);
 
@@ -164,7 +209,17 @@ void LcdScreen::SetImage(const std::string &bytes)
     }
     while( i < compressedSize);
 
+
 end:
+
+
+
+    {
+        memcpy(bmpImage + 512, compressed, compressedSize);
+        std::ofstream outfile ("final.bmp", std::ofstream::binary);
+        outfile.write (reinterpret_cast<char *>(bmpImage), 512 + 320*240);
+        outfile.close();
+    }
 
     const QString palette[16] = {
         "#F0F0F0", "#DCDCDC", "#D3D3D3", "#C8C8C8",

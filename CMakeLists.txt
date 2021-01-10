@@ -11,6 +11,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
+set( CMAKE_VERBOSE_MAKEFILE on )
+
 add_subdirectory(icl build_icl)
 
 
@@ -51,3 +54,6 @@ target_compile_definitions(osb-app
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(osb-app
   PRIVATE Qt5::Core Qt5::Quick icl)
+
+#add_link_options(-Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev)
+#SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev")
