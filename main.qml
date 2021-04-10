@@ -8,7 +8,7 @@ ApplicationWindow {
     visible: true
     width: 720
     height: 405
-    title: qsTr("OpenStoryBox Application")
+    title: qsTr("Open Story Teller")
 
     // ==========================  COMPOSANTS DYNAMIQUES ==========================
 

@@ -8,7 +8,7 @@ Rectangle {
 
     height: width
 //    icon.name: idFrontButton.iconName
-    color: "#f0bc61"
+    color: "#97d5e0" // jaune luuni : "#f0bc61"
 //    border.color: "#F3C565"
 //    border.width: idFrontButton.activeFocus ? 1 : 2
     radius: width * 0.5

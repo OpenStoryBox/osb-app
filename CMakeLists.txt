@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(osb-app LANGUAGES CXX)
+project(ost-app LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -8,14 +8,20 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-set( CMAKE_VERBOSE_MAKEFILE on )
+set( CMAKE_VERBOSE_MAKEFILE ON)
 
 add_subdirectory(icl build_icl)
 
+# Add -O0 to remove optimizations when using gcc
+IF(CMAKE_COMPILER_IS_GNUCC)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+ENDIF(CMAKE_COMPILER_IS_GNUCC)
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check http://doc.qt.io/qt-5/deployment-android.html for more information.
@@ -30,30 +36,34 @@ add_subdirectory(icl build_icl)
 #    endif()
 #endif()
 
-find_package(Qt5 COMPONENTS Core Quick REQUIRED)
+find_package(Qt5 COMPONENTS Core Quick Widgets REQUIRED)
+find_package(Qt5Multimedia REQUIRED)
+find_package(Qt5Widgets REQUIRED)
 
 if(ANDROID)
-    add_library(osb-app SHARED
+    add_library(ost-app SHARED
       main.cpp
       packarchive.cpp
-      lcdscreen.cpp
-      osb.cpp
+      StoryTellerModel.cpp
+      ni_parser.c
       qml.qrc
     )
 else()
-    add_executable(osb-app
+    add_executable(ost-app
       main.cpp
       packarchive.cpp
-      lcdscreen.cpp
-      osb.cpp
+      StoryTellerModel.cpp
+      soundplayer.cpp
+      ni_parser.h
+      ni_parser.c
       qml.qrc
     )
 endif()
 
-target_compile_definitions(osb-app
+target_compile_definitions(ost-app
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-target_link_libraries(osb-app
-  PRIVATE Qt5::Core Qt5::Quick icl)
+target_link_libraries(ost-app
+  PRIVATE Qt5::Core Qt5::Quick Qt5::Multimedia Qt5::Widgets icl)
 
 #add_link_options(-Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev)
 #SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev")

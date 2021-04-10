@@ -1,4 +1,4 @@
-#include "lcdscreen.h"
+#include "StoryTellerModel.h"
 
 #include "packarchive.h"
 
@@ -9,86 +9,66 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fstream>
+#include "ni_parser.h"
 
-LcdScreen::LcdScreen(QObject *parent) : QObject(parent)
+StoryTellerModel::StoryTellerModel(QObject *parent) : QObject(parent)
+{
+    mPacksPath = settings.value("packs/path").toString();
+}
+
+QString StoryTellerModel::getImage()
+{
+    return mImage;
+}
+
+void StoryTellerModel::openFile()
+{
+    pack.Load("/home/anthony/lunii_packs/c8b39950de174eaa8e852a07fc468267.pk");
+
+    SetImage(pack.CurrentImage());
+    mSound.Play(pack.CurrentSound());
+//    pack.Load("/home/anthony/lunii_packs/3ade540306254fffa22b9025ac3678d9.pk");
+    // mLcd.SetImage(pack.OpenImage("C8B39950DE174EAA8E852A07FC468267/rf/000/05FB5530"));
+}
+
+void StoryTellerModel::okButton()
 {
 
 }
 
-QString LcdScreen::getImage()
+void StoryTellerModel::saveSettings(const QString &packPath)
 {
-    // Always save the image to the filesystem
-    mCurrentPix.save("output.png");
+    settings.setValue("packs/path", packPath);
+}
 
-    std::ifstream input("output.png", std::ios::in | std::ios::binary );
+void StoryTellerModel::SetImage(const std::string &bytes)
+{
+    uint8_t bmpImage[512 + 320*240];
+    uint32_t compressedSize = bytes.length() - 512;
 
-    std::string buffer;
+    memcpy(bmpImage, bytes.data(), 512);
+    ni_decode_block512(bmpImage);
 
-    input.seekg(0, std::ios::end);
-    buffer.reserve(input.tellg());
-    input.seekg(0, std::ios::beg);
+    memcpy(bmpImage + 512, bytes.data() + 512, compressedSize);
 
-    // Copy all data into a buffer
-    // note the extra parentheses around the first argument to the string constructor.
-    // These are essential. They prevent the problem known as the "most vexing parse",
-    // which in this case won't actually give you a compile error like it usually does,
-    // but will give you interesting (read: wrong) results.
-    buffer.assign((std::istreambuf_iterator<char>(input)),
-                  (std::istreambuf_iterator<char>()));
-    input.close();
+//    std::ofstream outfile ("final.bmp", std::ofstream::binary);
+//    outfile.write (reinterpret_cast<char *>(bmpImage), 512 + 320*240);
+//    outfile.close();
 
-    // Build a simple JSON object as a string so that the script can manipulate it
+    mCurrentPix = QImage(bmpImage, 320, 240, QImage::Format_RGB16);
+
     std::stringstream ss;
-    std::string base64_str = Base64::Encode(buffer);
+    std::string base64_str = Base64::Encode(std::string(reinterpret_cast<char*>(bmpImage), sizeof(bmpImage)));
 
-    QString image("data:image/bmp;base64,");
+    mImage = "data:image/bmp;base64,";
 
-    image.append(QString::fromLatin1(base64_str.data()));
-    return image;
+    mImage.append(QString::fromLatin1(base64_str.data()));
+
+    emit sigShowImage();
 }
-
-#define DELTA 0x9e3779b9
-#define MX (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)))
-
-void btea(uint32_t *v, int n, uint32_t const key[4]) {
-    uint32_t y, z, sum;
-    unsigned p, rounds, e;
-    if (n > 1) {          /* Coding Part */
-        rounds = 6 + 52/n;
-        sum = 0;
-        z = v[n-1];
-        do {
-            sum += DELTA;
-            e = (sum >> 2) & 3;
-            for (p=0; p < (n-1); p++) {
-                y = v[p+1];
-                z = v[p] += MX;
-            }
-            y = v[0];
-            z = v[n-1] += MX;
-        } while (--rounds);
-    } else if (n < -1) {  /* Decoding Part */
-        n = -n;
-        //rounds = 6 + 52/n;
-        rounds = 0x34 / (n >>1) +1;
-        sum = rounds*DELTA;
-        y = v[0];
-        do {
-            e = (sum >> 2) & 3;
-            for (p=n-1; p>0; p--) {
-                z = v[p-1];
-                y = v[p] -= MX;
-            }
-            z = v[n-1];
-            y = v[0] -= MX;
-            sum -= DELTA;
-        } while (--rounds);
-    }
-}
-
-const uint32_t key[4] = {0x91bd7a0a, 0xa75440a9, 0xbbd49d6c, 0xe0dcc0e3};
-
-void LcdScreen::SetImage(const std::string &bytes)
+/*
+// Code de décompression
+void StoryTellerModel::SetImage(const std::string &bytes)
 {
     uint32_t width = 320;
     uint32_t height = 240;
@@ -213,14 +193,6 @@ void LcdScreen::SetImage(const std::string &bytes)
 end:
 
 
-
-    {
-        memcpy(bmpImage + 512, compressed, compressedSize);
-        std::ofstream outfile ("final.bmp", std::ofstream::binary);
-        outfile.write (reinterpret_cast<char *>(bmpImage), 512 + 320*240);
-        outfile.close();
-    }
-
     const QString palette[16] = {
         "#F0F0F0", "#DCDCDC", "#D3D3D3", "#C8C8C8",
         "#BEBEBE", "#B0B0B0", "#A8A8A8", "#989898",
@@ -267,3 +239,4 @@ end:
 
     emit sigShowImage();
 }
+*/

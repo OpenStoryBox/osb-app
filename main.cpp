@@ -7,23 +7,25 @@
 #include <QIcon>
 
 #include "packarchive.h"
-#include "lcdscreen.h" // LCD adapter from C to QML
-#include "osb.h"
+#include "StoryTellerModel.h" // LCD adapter from C to QML
+
 
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
+    //set names
+    QCoreApplication::setOrganizationName("D8S");
+    QCoreApplication::setApplicationName("Open Story Teller");
+
     QGuiApplication app(argc, argv);
 
-    LcdScreen lcd;
-    Osb osb(lcd);
+    StoryTellerModel storyTeller;
 
     QQmlApplicationEngine engine;
 
     QQmlContext * ctxt = engine.rootContext();
-    ctxt->setContextProperty("lcd", &lcd); // on rend cet objet accessible en QML
-    ctxt->setContextProperty("osb", &osb);
+    ctxt->setContextProperty("storyTeller", &storyTeller); // on rend cet objet accessible en QML
 
     const QUrl url(QStringLiteral("qrc:/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
