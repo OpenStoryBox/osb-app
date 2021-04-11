@@ -4,9 +4,11 @@
 #include <QObject>
 #include <QImage>
 #include <QSettings>
+#include <QBuffer>
+#include <QByteArray>
+#include <QtMultimedia/QMediaPlayer>
 
 #include "packarchive.h"
-#include "soundplayer.h"
 
 class StoryTellerModel : public QObject
 {
@@ -17,15 +19,14 @@ public:
     void SetImage(const std::string &bytes);
 
     Q_INVOKABLE QString getImage();
-
     Q_INVOKABLE void saveSettings(const QString &packPath);
-
     Q_INVOKABLE void openFile();
-
     Q_INVOKABLE void okButton();
 
+    void ClearScreen();
 signals:
     void sigShowImage();
+    void sigClearScreen();
 
 private:
     QImage mCurrentPix;
@@ -33,7 +34,14 @@ private:
     QSettings settings;
     QString mPacksPath;
     PackArchive pack;
-    SoundPlayer mSound;
+    QMediaPlayer *player;
+    QBuffer buffer;
+
+    void ShowResources();
+    void Play(const std::string &fileName, const QByteArray &ar);
+
+private slots:
+    void slotPlayerStateChanged(QMediaPlayer::State newState);
 };
 
 #endif // STORY_TELLER_MODEL_H

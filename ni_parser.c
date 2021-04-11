@@ -26,6 +26,9 @@ static struct {
     uint8_t gRiBlock[512];
     uint8_t gSiBlock[512];
     uint8_t gLiBlock[512];
+    uint32_t ri_size;
+    uint32_t si_size;
+    uint32_t li_size;
 } pack __attribute__ ((aligned (4)));
 
 #define DELTA 0x9e3779b9
@@ -66,6 +69,7 @@ static const uint32_t key[4] = {0x91bd7a0a, 0xa75440a9, 0xbbd49d6c, 0xe0dcc0e3};
 void ni_set_ri_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gRiBlock, data, size);
+    pack.ri_size = size;
     int n = min(128, size / 4);
     btea_decode((uint32_t*)pack.gRiBlock, n, key);
 }
@@ -73,6 +77,7 @@ void ni_set_ri_block(const uint8_t *data, uint32_t size)
 void ni_set_si_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gSiBlock, data, size);
+    pack.si_size = size;
     int n = min(128, size / 4);
     btea_decode((uint32_t*)pack.gSiBlock, n, key);
 }
@@ -80,6 +85,7 @@ void ni_set_si_block(const uint8_t *data, uint32_t size)
 void ni_set_li_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gLiBlock, data, size);
+    pack.li_size = size;
     int n = min(128, size / 4);
     btea_decode((uint32_t*) pack.gLiBlock, n, key);
 }
@@ -102,12 +108,39 @@ bool ni_get_node_info(uint32_t index, node_info_t *node)
         node->si_file[12] = '\0';
 
         // Copy image file name
-        offset = node->current->image_asset_index_in_ri * 12;
-        memcpy(node->ri_file, &pack.gRiBlock[offset], 12);
-        node->ri_file[12] = '\0';
+        if (node->current->image_asset_index_in_ri != 0xFFFFFFFF)
+        {
+            offset = node->current->image_asset_index_in_ri * 12;
+            memcpy(node->ri_file, &pack.gRiBlock[offset], 12);
+            node->ri_file[12] = '\0';
+        }
+        else
+        {
+            // Pas d'image pour ce noeud
+            node->ri_file[0] = '\0';
+        }
+    }
+    else
+    {
+        printf("Bad node index\r\n");
     }
 
     return success;
+}
+
+// index 32 bits ou octet ?
+uint32_t ni_get_node_index_in_li(uint32_t index_in_li)
+{
+    uint32_t node_index = 0; // si erreur, on revient au point de départ
+    if ((index_in_li * 4) < pack.li_size)
+    {
+        node_index = leu32_get(&pack.gLiBlock[index_in_li * 4]);
+    }
+    else
+    {
+        printf("index_in_li too large\r\n");
+    }
+    return node_index;
 }
 
 void ni_parse_nodes(const uint8_t *data)

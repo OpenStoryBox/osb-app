@@ -15,12 +15,15 @@ public:
     std::string OpenImage(const std::string &fileName);
     std::string CurrentImage();
     QByteArray CurrentSound();
+    std::string CurrentSoundName();
+    void OkButton();
+    bool HasImage();
 
 private:
     Zip mZip;
     std::string mPackName;
-    uint32_t mCurrentNode;
-    node_info_t node;
+    uint32_t mCurrentNodeId;
+    node_info_t mCurrentNode;
     bool ParseNIFile(const std::string &root);
 };
 

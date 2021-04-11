@@ -14,6 +14,9 @@
 StoryTellerModel::StoryTellerModel(QObject *parent) : QObject(parent)
 {
     mPacksPath = settings.value("packs/path").toString();
+
+    player = new QMediaPlayer;
+    connect(player, SIGNAL(stateChanged(QMediaPlayer::State)), this, SLOT(slotPlayerStateChanged(QMediaPlayer::State)));
 }
 
 QString StoryTellerModel::getImage()
@@ -25,20 +28,38 @@ void StoryTellerModel::openFile()
 {
     pack.Load("/home/anthony/lunii_packs/c8b39950de174eaa8e852a07fc468267.pk");
 
-    SetImage(pack.CurrentImage());
-    mSound.Play(pack.CurrentSound());
+    ShowResources();
 //    pack.Load("/home/anthony/lunii_packs/3ade540306254fffa22b9025ac3678d9.pk");
     // mLcd.SetImage(pack.OpenImage("C8B39950DE174EAA8E852A07FC468267/rf/000/05FB5530"));
 }
 
 void StoryTellerModel::okButton()
 {
+    pack.OkButton();
+    ShowResources();
+}
 
+void StoryTellerModel::ShowResources()
+{
+    if (pack.HasImage())
+    {
+        SetImage(pack.CurrentImage());
+    }
+    else
+    {
+        ClearScreen();
+    }
+    Play(pack.CurrentSoundName(), pack.CurrentSound());
 }
 
 void StoryTellerModel::saveSettings(const QString &packPath)
 {
     settings.setValue("packs/path", packPath);
+}
+
+void StoryTellerModel::ClearScreen()
+{
+    emit sigClearScreen();
 }
 
 void StoryTellerModel::SetImage(const std::string &bytes)
@@ -66,6 +87,28 @@ void StoryTellerModel::SetImage(const std::string &bytes)
 
     emit sigShowImage();
 }
+
+void StoryTellerModel::Play(const std::string &fileName, const QByteArray &ar)
+{
+    buffer.close();
+    buffer.setData(ar);
+    buffer.open(QIODevice::ReadOnly);
+
+    player->setMedia(QUrl(fileName.c_str()), &buffer);
+    player->setVolume(50);
+    player->play();
+}
+
+void StoryTellerModel::slotPlayerStateChanged(QMediaPlayer::State newState)
+{
+    if (newState == QMediaPlayer::StoppedState)
+    {
+        // next action!
+        std::cout << "Sound ended" << std::endl;
+    }
+}
+
+
 /*
 // Code de décompression
 void StoryTellerModel::SetImage(const std::string &bytes)

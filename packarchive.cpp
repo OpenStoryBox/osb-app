@@ -14,7 +14,7 @@ PackArchive::PackArchive()
 void PackArchive::Load(const std::string &filePath)
 {
     mZip.Close();
-    mCurrentNode = 0;
+    mCurrentNodeId = 0;
 
     std::string fileName = Util::GetFileName(filePath);
     std::string ext = Util::GetFileExtension(fileName);
@@ -38,7 +38,7 @@ void PackArchive::Load(const std::string &filePath)
             std::cout << "Parse NI file success\r\n"  << std::endl;
             ni_dump();
 
-            ni_get_node_info(mCurrentNode, &node);
+            ni_get_node_info(mCurrentNodeId, &mCurrentNode);
         }
         else
         {
@@ -57,7 +57,7 @@ std::string PackArchive::OpenImage(const std::string &fileName)
 std::string PackArchive::CurrentImage()
 {
     //"C8B39950DE174EAA8E852A07FC468267/rf/000/05FB5530"
-    std::string imagePath = mPackName + "/rf/" + std::string(node.ri_file);
+    std::string imagePath = mPackName + "/rf/" + std::string(mCurrentNode.ri_file);
     Util::ReplaceCharacter(imagePath, "\\", "/");
 
     std::cout << "Loading " + imagePath << std::endl;
@@ -67,17 +67,40 @@ std::string PackArchive::CurrentImage()
 QByteArray PackArchive::CurrentSound()
 {
     //"C8B39950DE174EAA8E852A07FC468267/sf/000/05FB5530"
-    std::string soundPath = mPackName + "/sf/" + std::string(node.si_file);
-    std::cout << "Loading " + soundPath << std::endl;
-
+    std::string soundPath = mPackName + "/sf/" + std::string(mCurrentNode.si_file);
     Util::ReplaceCharacter(soundPath, "\\", "/");
 
-    std::string f;
-    mZip.GetFile(soundPath, f);
+    std::cout << "Loading " + soundPath << std::endl;
 
-    ni_decode_block512(reinterpret_cast<uint8_t *>(f.data()));
-    QByteArray data(f.data(), f.size());
-    return data;
+    std::string f;
+    if (mZip.GetFile(soundPath, f))
+    {
+        ni_decode_block512(reinterpret_cast<uint8_t *>(f.data()));
+        QByteArray data(f.data(), f.size());
+        return data;
+    }
+    else
+    {
+        std::cout << "Cannot load file from ZIP" << std::endl;
+    }
+    return QByteArray();
+}
+
+std::string PackArchive::CurrentSoundName()
+{
+    return std::string(mCurrentNode.si_file);
+}
+
+void PackArchive::OkButton()
+{
+    mCurrentNodeId = ni_get_node_index_in_li(mCurrentNode.current->ok_transition_action_node_index_in_li);
+
+    ni_get_node_info(mCurrentNodeId, &mCurrentNode);
+}
+
+bool PackArchive::HasImage()
+{
+    return std::string(mCurrentNode.ri_file).size() > 1;
 }
 
 bool PackArchive::ParseNIFile(const std::string &root)

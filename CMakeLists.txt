@@ -53,7 +53,6 @@ else()
       main.cpp
       packarchive.cpp
       StoryTellerModel.cpp
-      soundplayer.cpp
       ni_parser.h
       ni_parser.c
       qml.qrc

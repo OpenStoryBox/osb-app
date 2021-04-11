@@ -7,5 +7,6 @@
         <file>icons/home.png</file>
         <file>icons/ok.png</file>
         <file>icons/pause.png</file>
+        <file>default_image.bmp</file>
     </qresource>
 </RCC>

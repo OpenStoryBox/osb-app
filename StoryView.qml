@@ -30,11 +30,10 @@ Rectangle {
 
     function setImage(img) {
         imageDisplay.source = img;
-    }  
+    }
 
     function saveCurrentData() {
     }
-
 
     Component.onCompleted: {
         storyTeller.openFile();
@@ -45,6 +44,10 @@ Rectangle {
         target: storyTeller
         function onSigShowImage() {
             setImage(storyTeller.getImage());
+        }
+
+        function onSigClearScreen() {
+            setImage("default_image.bmp");
         }
     }
 
