@@ -8,11 +8,26 @@
 
 PackArchive::PackArchive()
 {
-    QByteArray ba;
+
 }
 
-void PackArchive::Load(const std::string &filePath)
+std::vector<std::string> PackArchive::GetImages()
 {
+    std::vector<std::string> imgList;
+
+    for (uint32_t i = 0; i < ni_get_number_of_images(); i++)
+    {
+        char buffer[13];
+        ni_get_image(buffer, i);
+        imgList.push_back(buffer);
+    }
+
+    return imgList;
+}
+
+bool PackArchive::Load(const std::string &filePath)
+{
+    bool success = false;
     mZip.Close();
     mCurrentNodeId = 0;
 
@@ -35,6 +50,7 @@ void PackArchive::Load(const std::string &filePath)
 
         if (ParseNIFile(mPackName))
         {
+            success = true;
             std::cout << "Parse NI file success\r\n"  << std::endl;
             ni_dump();
 
@@ -45,6 +61,7 @@ void PackArchive::Load(const std::string &filePath)
             std::cout << "Parse NI file error\r\n"  << std::endl;
         }
     }
+    return success;
 }
 
 std::string PackArchive::OpenImage(const std::string &fileName)
@@ -54,14 +71,19 @@ std::string PackArchive::OpenImage(const std::string &fileName)
     return f;
 }
 
-std::string PackArchive::CurrentImage()
+std::string PackArchive::GetImage(const std::string &fileName)
 {
     //"C8B39950DE174EAA8E852A07FC468267/rf/000/05FB5530"
-    std::string imagePath = mPackName + "/rf/" + std::string(mCurrentNode.ri_file);
+    std::string imagePath = mPackName + "/rf/" + fileName;
     Util::ReplaceCharacter(imagePath, "\\", "/");
 
     std::cout << "Loading " + imagePath << std::endl;
     return OpenImage(imagePath);
+}
+
+std::string PackArchive::CurrentImage()
+{
+    return GetImage(std::string(mCurrentNode.ri_file));
 }
 
 QByteArray PackArchive::CurrentSound()
@@ -91,10 +113,62 @@ std::string PackArchive::CurrentSoundName()
     return std::string(mCurrentNode.si_file);
 }
 
+bool PackArchive::AutoPlay()
+{
+    return mCurrentNode.current->auto_play;
+}
+
+bool PackArchive::IsRoot() const
+{
+    return mCurrentNodeId == 0;
+}
+
+bool PackArchive::IsWheelEnabled() const
+{
+    return mCurrentNode.current->wheel;
+}
+
+void PackArchive::Next()
+{
+    // L'index de circulation dans le tableau des transitions commence à 1 (pas à zéro ...)
+    uint32_t index = 1;
+    if (mCurrentNode.current->ok_transition_selected_option_index < mNodeForChoice.current->ok_transition_number_of_options)
+    {
+        index = mCurrentNode.current->ok_transition_selected_option_index + 1;
+    }
+    // sinon on revient à l'index 0 (début du tableau des transitions)
+
+    mCurrentNodeId = ni_get_node_index_in_li(mNodeForChoice.current->ok_transition_action_node_index_in_li, index - 1);
+    ni_get_node_info(mCurrentNodeId, &mCurrentNode);
+}
+
+void PackArchive::Previous()
+{
+    // L'index de circulation dans le tableau des transitions commence à 1 (pas à zéro ...)
+    uint32_t index = 1;
+    if (mCurrentNode.current->ok_transition_selected_option_index > 1)
+    {
+        index = mCurrentNode.current->ok_transition_selected_option_index - 1;
+    }
+    else
+    {
+        index = mNodeForChoice.current->ok_transition_number_of_options;
+    }
+
+    mCurrentNodeId = ni_get_node_index_in_li(mNodeForChoice.current->ok_transition_action_node_index_in_li, index - 1);
+    ni_get_node_info(mCurrentNodeId, &mCurrentNode);
+}
+
 void PackArchive::OkButton()
 {
-    mCurrentNodeId = ni_get_node_index_in_li(mCurrentNode.current->ok_transition_action_node_index_in_li);
-
+    if (mCurrentNode.current->home_transition_number_of_options > 0)
+    {
+        // On doit faire un choix!
+        // On sauvegarde ce noeud car il va servir pour naviguer dans les choix
+        mNodeIdForChoice = mCurrentNodeId;
+        ni_get_node_info(mNodeIdForChoice, &mNodeForChoice);
+    }
+    mCurrentNodeId = ni_get_node_index_in_li(mCurrentNode.current->ok_transition_action_node_index_in_li, mCurrentNode.current->ok_transition_selected_option_index);
     ni_get_node_info(mCurrentNodeId, &mCurrentNode);
 }
 

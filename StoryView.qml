@@ -26,17 +26,13 @@ Rectangle {
 
     property int sectionHeight: idStoryView.isPortrait ? idStoryView.height / 2 : idStoryView.height
 
-    property string packPath: ''
-
     function setImage(img) {
         imageDisplay.source = img;
     }
 
-    function saveCurrentData() {
-    }
-
     Component.onCompleted: {
-        storyTeller.openFile();
+
+        storyTeller.initialize();
     }
 
     Connections
@@ -59,10 +55,10 @@ Rectangle {
         color: "transparent"
 
         Rectangle {
+            id: idLcdArea
             anchors.centerIn: parent
             width: idStoryView.isPortrait ?  height * 4 / 3 : idStoryView.sectionWidth1  * 4 / 5
             height: idStoryView.isPortrait ? idStoryView.sectionHeight  * 4 / 5 :  width * 3 / 4
-
             color: "#38A0A2"
 
             Image {
@@ -71,6 +67,61 @@ Rectangle {
                 fillMode: Image.PreserveAspectFit
                 anchors.fill: parent
             }
+
+            MouseArea {
+                anchors.fill: parent
+                preventStealing: true
+                property real velocity: 0.0
+                property int xStart: 0
+                property int xPrev: 0
+                property bool tracing: false
+                onPressed: {
+                    xStart = mouse.x
+                    xPrev = mouse.x
+                    velocity = 0
+                    tracing = true
+                    console.log( " pressed  "+xStart)
+                    console.log( " pressed  "+xPrev)
+                }
+                onPositionChanged: {
+                    if ( !tracing ) return
+                    var currVel = mouse.x > xPrev ? (mouse.x-xPrev) : xPrev - mouse.x
+                    velocity = (velocity + currVel)/2.0
+                    xPrev = mouse.x
+
+                    if ( velocity > 15 && mouse.x > parent.width*0.2 ) {
+                        tracing = false
+                    }
+
+                    if ( velocity > 15 && mouse.x < parent.width*0.2 ) {
+                        tracing = false
+                    }
+                }
+                onReleased: {
+                    tracing = false
+                    if ( velocity > 15 && mouse.x > parent.width*0.2 ) {
+                        // SWIPE DETECTED !! EMIT SIGNAL or DO your action
+                        console.log(">>>>>>>");
+
+                        storyTeller.next();
+                    }
+
+                    if ( velocity > 15 && mouse.x < parent.width*0.2 ) {
+                        // SWIPE DETECTED !! EMIT SIGNAL or DO your action
+                        console.log("<<<<<<<");
+
+                        storyTeller.previous();
+                    }
+                }
+            }
+        } // écran lcd
+
+        Label {
+            anchors.top: idLcdArea.bottom
+            anchors.topMargin: 10
+            width: parent.width
+            text: storyTeller.message
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 
@@ -84,7 +135,8 @@ Rectangle {
 
         Button {
             text: "\u2630";
-            x: idStoryView.isPortrait ? 0 : idStoryView.sectionWidth1 + idStoryView.sectionWidth2 - 45
+            anchors.right: parent.right
+            anchors.rightMargin: 20
             width: 40
             onClicked:  folderDialog.open()
         }
@@ -94,8 +146,7 @@ Rectangle {
             selectFolder: true
             onAccepted: {
 //                console.log("You chose: " + folderDialog.fileUrl)
-                idStoryView.packPath = folderDialog.fileUrl;
-                idStoryView.saveCurrentData();
+                storyTeller.saveSettings(folderDialog.fileUrl);
             }
         }
 

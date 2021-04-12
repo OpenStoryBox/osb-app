@@ -13,6 +13,9 @@
 class StoryTellerModel : public QObject
 {
     Q_OBJECT
+
+    Q_PROPERTY(QString message READ getMessage NOTIFY sigMessageChanged)
+
 public:
     explicit StoryTellerModel(QObject *parent = nullptr);
 
@@ -22,23 +25,39 @@ public:
     Q_INVOKABLE void saveSettings(const QString &packPath);
     Q_INVOKABLE void openFile();
     Q_INVOKABLE void okButton();
+    Q_INVOKABLE void previous();
+    Q_INVOKABLE void next();
+    Q_INVOKABLE QString getMessage() { return mCurrentMessage; }
+    Q_INVOKABLE void initialize();
 
     void ClearScreen();
+    void DecryptImage(const std::string &bytes);
+    void SaveImage(const std::string &fileName);
+
 signals:
     void sigShowImage();
     void sigClearScreen();
+    void sigMessageChanged();
 
 private:
-    QImage mCurrentPix;
     QString mImage;
     QSettings settings;
-    QString mPacksPath;
     PackArchive pack;
     QMediaPlayer *player;
     QBuffer buffer;
+    QString mCurrentMessage;
+    uint8_t bmpImage[512 + 320*240];
+
+    // Circulation dans les différents packs
+    QString mPacksPath;
+    QStringList mListOfPacks;
+    uint32_t mCurrentPackIndex = 0;
 
     void ShowResources();
     void Play(const std::string &fileName, const QByteArray &ar);
+    void SetMessage(const QString &newMessage);
+    void ScanPacks();
+
 
 private slots:
     void slotPlayerStateChanged(QMediaPlayer::State newState);

@@ -95,6 +95,23 @@ void ni_decode_block512(uint8_t *data)
     btea_decode((uint32_t*) data, 128, key);
 }
 
+uint32_t ni_get_number_of_images()
+{
+    return pack.ri_size / 12;
+}
+
+void ni_get_image(char buffer[13], uint32_t index)
+{
+    uint32_t offset = index * 12;
+
+    if (offset >= pack.ri_size)
+    {
+        offset = 0;
+    }
+    memcpy(buffer, &pack.gRiBlock[offset], 12);
+    buffer[12] = '\0';
+}
+
 bool ni_get_node_info(uint32_t index, node_info_t *node)
 {
     bool success = false;
@@ -128,13 +145,13 @@ bool ni_get_node_info(uint32_t index, node_info_t *node)
     return success;
 }
 
-// index 32 bits ou octet ?
-uint32_t ni_get_node_index_in_li(uint32_t index_in_li)
+// index en mot de 32 bits: il faut le multiplier par 4 pour avoir l'offet en octet
+uint32_t ni_get_node_index_in_li(uint32_t index_in_li, uint32_t selected)
 {
     uint32_t node_index = 0; // si erreur, on revient au point de départ
     if ((index_in_li * 4) < pack.li_size)
     {
-        node_index = leu32_get(&pack.gLiBlock[index_in_li * 4]);
+        node_index = leu32_get(&pack.gLiBlock[(index_in_li + selected) * 4]);
     }
     else
     {

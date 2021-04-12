@@ -3,6 +3,7 @@
 #include "packarchive.h"
 
 #include <QPainter>
+#include <QDir>
 #include "Util.h"
 #include "Base64.h"
 #include <iostream>
@@ -14,29 +15,133 @@
 StoryTellerModel::StoryTellerModel(QObject *parent) : QObject(parent)
 {
     mPacksPath = settings.value("packs/path").toString();
-
     player = new QMediaPlayer;
     connect(player, SIGNAL(stateChanged(QMediaPlayer::State)), this, SLOT(slotPlayerStateChanged(QMediaPlayer::State)));
 }
 
+void StoryTellerModel::ScanPacks()
+{
+    QDir dir(mPacksPath);
+    QStringList filters;
+    filters << "*.pk";
+    dir.setNameFilters(filters);
+    if (dir.exists())
+    {
+        // scan all pack files
+        mListOfPacks = dir.entryList();
+
+        for (const auto & p : mListOfPacks)
+        {
+            std::cout << "Found pack: " << p.toStdString() << std::endl;
+        }
+
+        if (mListOfPacks.size() == 0)
+        {
+            SetMessage("Mauvais emplacement des packs");
+        }
+        else
+        {
+            openFile();
+        }
+    }
+    else
+    {
+        SetMessage("Mauvais emplacement des packs");
+    }
+}
+
 QString StoryTellerModel::getImage()
 {
-    return mImage;
+    std::stringstream ss;
+    std::string base64_str = Base64::Encode(std::string(reinterpret_cast<char*>(bmpImage), sizeof(bmpImage)));
+
+    QString image = "data:image/bmp;base64,";
+    image.append(QString::fromLatin1(base64_str.data()));
+    return image;
 }
 
 void StoryTellerModel::openFile()
 {
-    pack.Load("/home/anthony/lunii_packs/c8b39950de174eaa8e852a07fc468267.pk");
+    if (mListOfPacks.size() > 0)
+    {
+        QString packName = mListOfPacks[mCurrentPackIndex];
+        QString fullPackPath = mPacksPath + Util::DIR_SEPARATOR + packName;
+        if (pack.Load(fullPackPath.toStdString()))
+        {
+            SetMessage("");
+            /*
+         * std::vector<std::string> imgs = pack.GetImages();
+            uint32_t index = 0;
+            for (const auto & im : imgs)
+            {
+                std::string image = pack.GetImage(im);
+                DecryptImage(image);
 
-    ShowResources();
-//    pack.Load("/home/anthony/lunii_packs/3ade540306254fffa22b9025ac3678d9.pk");
-    // mLcd.SetImage(pack.OpenImage("C8B39950DE174EAA8E852A07FC468267/rf/000/05FB5530"));
+                std::string fileName = std::to_string(index) + "_" + im + std::string(".bmp");
+                Util::ReplaceCharacter(fileName, "\\", "_");
+                SaveImage(fileName);
+                index++;
+            }*/
+
+            ShowResources();
+        }
+        else
+        {
+            SetMessage("Pack load error: " + packName);
+        }
+    }
 }
 
 void StoryTellerModel::okButton()
 {
     pack.OkButton();
     ShowResources();
+}
+
+void StoryTellerModel::previous()
+{
+    if (pack.IsWheelEnabled() && !pack.IsRoot())
+    {
+        pack.Previous();
+        ShowResources();
+    }
+    else
+    {
+        if (mCurrentPackIndex > 0)
+        {
+            mCurrentPackIndex--;
+        }
+        else
+        {
+            mCurrentPackIndex = mListOfPacks.size() - 1;
+        }
+
+        openFile();
+    }
+}
+
+void StoryTellerModel::next()
+{
+    if (pack.IsWheelEnabled() && !pack.IsRoot())
+    {
+        pack.Next();
+        ShowResources();
+    }
+    else
+    {
+        mCurrentPackIndex++;
+        if (mCurrentPackIndex >= static_cast<uint32_t>(mListOfPacks.size()))
+        {
+            mCurrentPackIndex = 0;
+        }
+
+        openFile();
+    }
+}
+
+void StoryTellerModel::initialize()
+{
+    ScanPacks();
 }
 
 void StoryTellerModel::ShowResources()
@@ -49,12 +154,18 @@ void StoryTellerModel::ShowResources()
     {
         ClearScreen();
     }
-    Play(pack.CurrentSoundName(), pack.CurrentSound());
+
+    std::string fileName = pack.CurrentSoundName();
+    Util::ReplaceCharacter(fileName, "\\", "_");
+
+    Play(fileName, pack.CurrentSound());
 }
 
 void StoryTellerModel::saveSettings(const QString &packPath)
 {
-    settings.setValue("packs/path", packPath);
+    mPacksPath = QUrl(packPath).toLocalFile();
+    settings.setValue("packs/path", mPacksPath);
+    ScanPacks();
 }
 
 void StoryTellerModel::ClearScreen()
@@ -62,29 +173,26 @@ void StoryTellerModel::ClearScreen()
     emit sigClearScreen();
 }
 
-void StoryTellerModel::SetImage(const std::string &bytes)
+void StoryTellerModel::DecryptImage(const std::string &bytes)
 {
-    uint8_t bmpImage[512 + 320*240];
     uint32_t compressedSize = bytes.length() - 512;
 
     memcpy(bmpImage, bytes.data(), 512);
     ni_decode_block512(bmpImage);
 
     memcpy(bmpImage + 512, bytes.data() + 512, compressedSize);
+}
 
-//    std::ofstream outfile ("final.bmp", std::ofstream::binary);
-//    outfile.write (reinterpret_cast<char *>(bmpImage), 512 + 320*240);
-//    outfile.close();
+void StoryTellerModel::SaveImage(const std::string &fileName)
+{
+    std::ofstream outfile (fileName, std::ofstream::binary);
+    outfile.write (reinterpret_cast<char *>(bmpImage), 512 + 320*240);
+    outfile.close();
+}
 
-    mCurrentPix = QImage(bmpImage, 320, 240, QImage::Format_RGB16);
-
-    std::stringstream ss;
-    std::string base64_str = Base64::Encode(std::string(reinterpret_cast<char*>(bmpImage), sizeof(bmpImage)));
-
-    mImage = "data:image/bmp;base64,";
-
-    mImage.append(QString::fromLatin1(base64_str.data()));
-
+void StoryTellerModel::SetImage(const std::string &bytes)
+{
+    DecryptImage(bytes);
     emit sigShowImage();
 }
 
@@ -95,8 +203,14 @@ void StoryTellerModel::Play(const std::string &fileName, const QByteArray &ar)
     buffer.open(QIODevice::ReadOnly);
 
     player->setMedia(QUrl(fileName.c_str()), &buffer);
-    player->setVolume(50);
+    player->setVolume(60);
     player->play();
+}
+
+void StoryTellerModel::SetMessage(const QString &newMessage)
+{
+    mCurrentMessage = newMessage;
+    emit sigMessageChanged();
 }
 
 void StoryTellerModel::slotPlayerStateChanged(QMediaPlayer::State newState)
@@ -105,6 +219,12 @@ void StoryTellerModel::slotPlayerStateChanged(QMediaPlayer::State newState)
     {
         // next action!
         std::cout << "Sound ended" << std::endl;
+
+        if (pack.AutoPlay())
+        {
+            // équivalent de Ok button
+            okButton();
+        }
     }
 }
 

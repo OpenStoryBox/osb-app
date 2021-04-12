@@ -31,7 +31,9 @@ typedef struct {
     char si_file[13]; // 12 + \0
 } node_info_t;
 
-uint32_t ni_get_node_index_in_li(uint32_t index_in_li);
+uint32_t ni_get_number_of_images();
+void ni_get_image(char buffer[13], uint32_t index);
+uint32_t ni_get_node_index_in_li(uint32_t index_in_li, uint32_t selected);
 void ni_decode_block512(uint8_t *data);
 bool ni_get_node_info(uint32_t index, node_info_t *node);
 bool ni_parser(const uint8_t *data);
