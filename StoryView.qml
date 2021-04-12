@@ -66,6 +66,7 @@ Rectangle {
                 id: imageDisplay
                 fillMode: Image.PreserveAspectFit
                 anchors.fill: parent
+                source: "osb-logo-scale320x240.png"
             }
 
             MouseArea {
