@@ -9,6 +9,7 @@
 #include "packarchive.h"
 #include "StoryTellerModel.h" // LCD adapter from C to QML
 
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
 int main(int argc, char *argv[])
 {

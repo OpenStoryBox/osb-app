@@ -5,7 +5,7 @@
 #include <QPainter>
 #include <QDir>
 #include "Util.h"
-#include "Base64.h"
+#include "Base64Util.h"
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>

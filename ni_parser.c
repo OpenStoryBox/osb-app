@@ -23,13 +23,13 @@ static ni_file_t gNiFile;
 static ni_node_t gNodes[MAX_NB_NODES];
 
 static struct {
-    uint8_t gRiBlock[512];
-    uint8_t gSiBlock[512];
-    uint8_t gLiBlock[512];
     uint32_t ri_size;
     uint32_t si_size;
     uint32_t li_size;
-} pack __attribute__ ((aligned (4)));
+    uint8_t gRiBlock[512];
+    uint8_t gSiBlock[512];
+    uint8_t gLiBlock[512];
+} pack;
 
 #define DELTA 0x9e3779b9
 #define MX (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)))
@@ -56,21 +56,12 @@ static void btea_decode(uint32_t *v, uint32_t n, const uint32_t *key)
 
 static const uint32_t key[4] = {0x91bd7a0a, 0xa75440a9, 0xbbd49d6c, 0xe0dcc0e3};
 
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
 
 void ni_set_ri_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gRiBlock, data, size);
     pack.ri_size = size;
-    int n = min(128, size / 4);
+    uint32_t n = size / 4;
     btea_decode((uint32_t*)pack.gRiBlock, n, key);
 }
 
@@ -78,7 +69,7 @@ void ni_set_si_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gSiBlock, data, size);
     pack.si_size = size;
-    int n = min(128, size / 4);
+    uint32_t n = size / 4;
     btea_decode((uint32_t*)pack.gSiBlock, n, key);
 }
 
@@ -86,7 +77,7 @@ void ni_set_li_block(const uint8_t *data, uint32_t size)
 {
     memcpy(pack.gLiBlock, data, size);
     pack.li_size = size;
-    int n = min(128, size / 4);
+    uint32_t n = size / 4;
     btea_decode((uint32_t*) pack.gLiBlock, n, key);
 }
 

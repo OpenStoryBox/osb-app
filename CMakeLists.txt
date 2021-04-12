@@ -40,6 +40,30 @@ find_package(Qt5 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(Qt5Multimedia REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
+if (UNIX AND NOT APPLE)
+    add_definitions(-DUSE_UNIX_OS -DUSE_LINUX_OS)
+endif()
+
+if(WIN32)
+    add_definitions(-DUSE_WINDOWS_OS)
+endif()
+
+set(SRCS
+    main.cpp
+    packarchive.cpp
+    StoryTellerModel.cpp
+    ni_parser.h
+    ni_parser.c
+    qml.qrc
+)
+
+if(WIN32)
+    list(APPEND
+        SRCS
+        icon.rc
+    )
+endif()
+
 if(ANDROID)
     add_library(ost-app SHARED
       main.cpp
@@ -50,19 +74,24 @@ if(ANDROID)
     )
 else()
     add_executable(ost-app
-      main.cpp
-      packarchive.cpp
-      StoryTellerModel.cpp
-      ni_parser.h
-      ni_parser.c
-      qml.qrc
+      ${SRCS}
     )
+endif()
+
+if(WIN32)
+SET (LIBS
+    ws2_32.lib psapi.lib setupapi.lib cfgmgr32.lib advapi32.lib Dbghelp.lib
+)
+else()
+SET (LIBS
+
+)
 endif()
 
 target_compile_definitions(ost-app
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(ost-app
-  PRIVATE Qt5::Core Qt5::Quick Qt5::Multimedia Qt5::Widgets icl)
+  PRIVATE Qt5::Core Qt5::Quick Qt5::Multimedia Qt5::Widgets icl ${LIBS})
 
 #add_link_options(-Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev)
 #SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wl,-lstdc++ -Wl,-lpthread -Wl,-ldl -Wl,-ludev")
