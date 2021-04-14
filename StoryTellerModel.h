@@ -59,6 +59,7 @@ private:
     void ScanPacks();
 
 
+    void TestDecompress();
 private slots:
     void slotPlayerStateChanged(QMediaPlayer::State newState);
 };

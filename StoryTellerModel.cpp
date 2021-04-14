@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include "ni_parser.h"
+#include "libutil.h"
 
 StoryTellerModel::StoryTellerModel(QObject *parent) : QObject(parent)
 {
@@ -142,6 +143,7 @@ void StoryTellerModel::next()
 void StoryTellerModel::initialize()
 {
     ScanPacks();
+//    TestDecompress();
 }
 
 void StoryTellerModel::ShowResources()
@@ -228,37 +230,123 @@ void StoryTellerModel::slotPlayerStateChanged(QMediaPlayer::State newState)
     }
 }
 
+typedef struct {
+   uint16_t type;                 /* Magic identifier            */
+   uint32_t size;                       /* File size in bytes          */
+   uint16_t reserved1;
+   uint16_t reserved2;
+   uint32_t offset;                     /* Offset to image data, bytes */
+} bmp_header_t;
 
-/*
+typedef struct {
+   uint32_t size;               /* Header size in bytes      */
+   uint32_t width;
+   uint32_t height;                /* Width and height of image */
+   uint16_t planes;       /* Number of colour planes   */
+   uint16_t bits;         /* Bits per pixel            */
+   uint32_t compression;        /* Compression type          */
+   uint32_t imagesize;          /* Image size in bytes       */
+   uint32_t xresolution;
+   uint32_t yresolution;     /* Pixels per meter          */
+   uint32_t ncolours;           /* Number of colours         */
+   uint32_t importantcolours;   /* Important colours         */
+   uint32_t rgb;
+   uint32_t rgb2;
+} bmp_infoheader_t;
+
+static const uint32_t HEADER_SIZE = 14;
+static const uint32_t INFO_HEADER_SIZE = 40;
+
+uint8_t parse_bmp(const uint8_t *data, uint32_t size, bmp_header_t *header, bmp_infoheader_t *info_header)
+{
+    uint8_t isBmp = 0;
+
+
+    // Header is 14 bytes length
+    if (size >= HEADER_SIZE)
+    {
+        isBmp = (data[0] == 'B') && (data[1] == 'M') ? 1 : 0;
+        header->size = leu32_get(data + 2);
+        header->offset = leu32_get(data + 10);
+    }
+
+    if (size >= (INFO_HEADER_SIZE + HEADER_SIZE))
+    {
+        isBmp = isBmp & 1;
+        info_header->size = leu32_get(data + HEADER_SIZE);
+        info_header->width = leu32_get(data + HEADER_SIZE + 4);
+        info_header->height = leu32_get(data + HEADER_SIZE + 8);
+        info_header->planes = leu16_get(data + HEADER_SIZE + 12);
+        info_header->bits = leu16_get(data + HEADER_SIZE + 14);
+        info_header->compression = leu32_get(data + HEADER_SIZE + 16);
+        info_header->imagesize = leu32_get(data + HEADER_SIZE + 20);
+        info_header->xresolution = leu32_get(data + HEADER_SIZE + 24);
+        info_header->yresolution = leu32_get(data + HEADER_SIZE + 28);
+        info_header->ncolours = leu32_get(data + HEADER_SIZE + 32);
+        info_header->importantcolours = leu32_get(data + HEADER_SIZE + 36);
+        info_header->rgb = leu32_get(data + HEADER_SIZE + 40);
+        info_header->rgb2 = leu32_get(data + HEADER_SIZE + 44);
+    }
+
+    return isBmp;
+}
+
 // Code de décompression
-void StoryTellerModel::SetImage(const std::string &bytes)
+void StoryTellerModel::TestDecompress()
 {
     uint32_t width = 320;
     uint32_t height = 240;
+
+    // Première version: on charge toute l'image en RAM
+    std::string bytes = Util::FileToString("/home/anthony/git/personnel/OpenStoryTeller/application/0_000_314CBAA1.bmp");
 
     if (bytes.size() <= 512)
     {
         return;
     }
 
+    // Buffer d'entrée, bitmap compressé
+    uint8_t bmpImage[bytes.size()];
+    memcpy(bmpImage, bytes.data(), bytes.length());
+    uint32_t fileSize = bytes.length();
+
+    bmp_header_t header;
+    bmp_infoheader_t info_header;
+    parse_bmp(bmpImage, fileSize, &header, &info_header);
+
+    uint8_t *compressed = &bmpImage[header.offset];
+    uint32_t compressedSize = fileSize - header.offset;
+
+    uint32_t paletteSize = header.offset - (HEADER_SIZE + INFO_HEADER_SIZE);
+
+    printf("File size (from header):%d\r\n", (uint32_t)header.size);
+    printf("File size (from data):%d\r\n", (uint32_t)fileSize);
+    printf("Data offset:%d\r\n", (uint32_t)header.offset);
+    printf("Image size:%d\r\n", (uint32_t)info_header.size);
+    printf("width:%d\r\n", (uint32_t)info_header.width);
+    printf("height:%d\r\n", (uint32_t)info_header.height);
+    printf("Planes:%d\r\n", (uint32_t)info_header.planes);
+    printf("Bits:%d\r\n", (uint32_t)info_header.bits);
+    printf("Compression:%d\r\n", (uint32_t)info_header.compression); // 2 - 4 bit run length encoding
+    printf("Image size:%d\r\n", (uint32_t)info_header.imagesize);
+    printf("X resolution:%d\r\n", (uint32_t)info_header.xresolution);
+    printf("Y resolution:%d\r\n", (uint32_t)info_header.yresolution);
+    printf("Colors:%d\r\n", (uint32_t)info_header.ncolours);
+    printf("Important colors:%d\r\n", (uint32_t)info_header.importantcolours);
+    printf("RGB :%d\r\n", (uint32_t)info_header.rgb);
+    printf("RGB2 :%d\r\n", (uint32_t)info_header.rgb2);
+
+    uint8_t *palette = &bmpImage[HEADER_SIZE + INFO_HEADER_SIZE]; // 16 * 4 bytes = 64
+
+    // buffer de sortie, bitmap décompressé
     uint8_t decompressed[320 * 240];
-
     memset(decompressed, 0, 320*240);
-    uint32_t compressedSize = bytes.length() - 512;
 
-    uint8_t compressed[compressedSize];
-
-    uint8_t bmpImage[512 + 320*240];
-
-    memcpy(bmpImage, bytes.data(), 512);
-    btea((uint32_t*) bmpImage, -128, key);
-
-    memcpy(compressed, bytes.data() + 512, compressedSize);
-
-//    std::cout << Util::HexDump("Image", compressed, compressedSize) << std::endl;
+  //  btea((uint32_t*) bmpImage, -128, key);
 
     QImage img(width, height, QImage::Format_RGB32);
-    img.fill(QColor("#38A0A2"));
+   // QPixmap img(width, height);
+//    img.fill(QColor("#38A0A2"));
     QPainter painter;
 
     painter.begin(&img);
@@ -274,17 +362,15 @@ void StoryTellerModel::SetImage(const std::string &bytes)
             // repeat number of pixels
             for (uint32_t j = 0; j < rleCmd; j++)
             {
-                uint32_t byte_index = pixel / 2;
-                if ((pixel & 1) == 0)
+                if ((j & 1) == 0)
                 {
-                    decompressed[byte_index] = (val & 0xF0);
-                    pixel++;
+                    decompressed[pixel] = (val & 0xF0) >>4;
                 }
                 else
                 {
-                    decompressed[byte_index] |= (val & 0x0F);
-                    pixel++;
+                    decompressed[pixel] = (val & 0x0F);
                 }
+                pixel++;
             }
             i += 2; // jump pair instruction
         }
@@ -306,7 +392,6 @@ void StoryTellerModel::SetImage(const std::string &bytes)
             else if (second == 1)
             {
                 std::cout << "End of bitmap" << std::endl;
-                i += 2;
                 goto end;
             }
             else if (second == 2)
@@ -322,18 +407,16 @@ void StoryTellerModel::SetImage(const std::string &bytes)
                 // repeat number of pixels
                 for (uint32_t j = 0; j < second; j++)
                 {
-                    uint32_t byte_index = pixel / 2;
-                    if ((pixel & 1) == 0)
+                    if ((j & 1) == 0)
                     {
-                        decompressed[byte_index] = (*ptr & 0xF0);
-                        pixel++;
+                        decompressed[pixel] = (*ptr & 0xF0) >> 4;
                     }
                     else
                     {
-                        decompressed[byte_index] |= (*ptr & 0x0F);
+                        decompressed[pixel] = (*ptr & 0x0F);
                         ptr++;
-                        pixel++;
                     }
+                    pixel++;
                 }
                 i += 2 + (second / 2);
 
@@ -345,44 +428,27 @@ void StoryTellerModel::SetImage(const std::string &bytes)
             }
         }
 
-        if (pixel >= (width * height))
+        if (pixel > (width * height))
         {
             std::cout << "Error!" << std::endl;
         }
     }
     while( i < compressedSize);
 
-
 end:
-
-
-    const QString palette[16] = {
-        "#F0F0F0", "#DCDCDC", "#D3D3D3", "#C8C8C8",
-        "#BEBEBE", "#B0B0B0", "#A8A8A8", "#989898",
-        "#808080", "#707070", "#606060", "#505050",
-        "#404040", "#303030", "#181818", "#000000"
-    };
-
     uint32_t x = 0, y = 0;
     for (uint32_t i = 0; i < pixel; i++)
     {
-        uint32_t byte_index = i / 2;
-        uint8_t val = decompressed[byte_index];
+        uint8_t val = decompressed[i];
+        if (val > 15)
+        {
+            std::cout << "Error!" << std::endl;
+        }
+        uint8_t *palettePtr = &palette[val * 4];
+        QColor pixColor(palettePtr[0], palettePtr[1], palettePtr[2]);
+        painter.setPen(pixColor);
+        painter.drawPoint(x, y);
 
-        if ((pixel & 1) == 0)
-        {
-            val = (val & 0xF0) >> 4;
-        }
-        else
-        {
-            val = val & 0x0F;
-        }
-
-        if (val > 0)
-        {
-            painter.setPen(QColor(palette[val]));
-            painter.drawPoint(x, y);
-        }
         x++;
         if (x >= width)
         {
@@ -391,15 +457,13 @@ end:
         }
     }
 
-
     painter.end();
 
 //    std::ofstream outfile ("new.txt", std::ofstream::binary);
 //    outfile.write (reinterpret_cast<const char *>(decompressed), pixel / 2 );
 //    outfile.close();
 
-    mCurrentPix = img.mirrored();
-
-    emit sigShowImage();
+    QImage finalImage = img.mirrored();
+    finalImage.save("test_dec.bmp");
 }
-*/
+
