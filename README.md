@@ -15,3 +15,15 @@ This is the application to read your story pack files on a computer (Windows/Lin
 
 There is no wheel to select the story or the user choices. Instead, swipe with your finger or the mouse on the fake LCD screen.
 
+# How to build
+
+## Dependencies
+
+This program needs CMake and Qt to build. You can use QtCreator to open & build the project.
+
+## Steps in command line
+
+1. git clone --recursive https://github.com/OpenStoryTeller/application
+2. cd application && mkdir build && cd build
+3. cmake ../ && make
+
