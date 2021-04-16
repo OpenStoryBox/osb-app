@@ -60,6 +60,7 @@ private:
 
 
     void TestDecompress();
+    void TestDecompress2();
 private slots:
     void slotPlayerStateChanged(QMediaPlayer::State newState);
 };
