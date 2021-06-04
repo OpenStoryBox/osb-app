@@ -38,6 +38,7 @@ signals:
     void sigShowImage();
     void sigClearScreen();
     void sigMessageChanged();
+    void sigDrawPixel(int r, int g, int b, int x, int y);
 
 private:
     QString mImage;
@@ -61,6 +62,7 @@ private:
 
     void TestDecompress();
     void TestDecompress2();
+    void WriteLine(uint8_t *decompressed, const uint8_t *palette, QPainter &painter, uint32_t width);
 private slots:
     void slotPlayerStateChanged(QMediaPlayer::State newState);
 };

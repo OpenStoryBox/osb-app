@@ -26,12 +26,14 @@ Rectangle {
 
     property int sectionHeight: idStoryView.isPortrait ? idStoryView.height / 2 : idStoryView.height
 
+    property int oneTime: 0;
+
     function setImage(img) {
-        imageDisplay.source = img;
+      //  imageDisplay.source = img;
     }
 
     Component.onCompleted: {
-
+      //  idLcdArea.initialize();
         storyTeller.initialize();
     }
 
@@ -45,6 +47,10 @@ Rectangle {
         function onSigClearScreen() {
             setImage("default_image.bmp");
         }
+
+        function onSigDrawPixel(r, g, b, x, y) {
+            idLcdArea.drawPixel(r, g, b, x, y);
+        }
     }
 
     Rectangle {
@@ -54,6 +60,43 @@ Rectangle {
         height: sectionHeight
         color: "transparent"
 
+
+        Canvas {
+//            id: mycanvas
+            id: idLcdArea
+            width: 320
+            height: 240
+            anchors.centerIn: parent
+
+
+
+                onPaint: {
+                    if (idStoryView.oneTime === 0)
+                    {
+                        idStoryView.oneTime = 1;
+                        var ctx = getContext("2d");
+                        ctx.fillStyle = Qt.rgba(1, 0, 0, 1);
+                        ctx.fillRect(0, 0, width, height);
+                    }
+                }
+
+            function initialize()
+            {
+                var ctx = getContext("2d");
+                ctx.fillStyle = Qt.rgba(1, 0, 0, 1);
+                ctx.fillRect(0, 0, width, height);
+                requestPaint();
+            }
+
+            function drawPixel(r, g, b, x, y)
+            {
+                var ctx = getContext("2d");
+                ctx.fillStyle = Qt.rgba(r/255, g/255, b/255, 1);
+                ctx.fillRect( x, y, 1, 1 );
+                requestPaint();
+            }
+        }
+/*
         Rectangle {
             id: idLcdArea
             anchors.centerIn: parent
@@ -61,13 +104,16 @@ Rectangle {
             height: idStoryView.isPortrait ? idStoryView.sectionHeight  * 4 / 5 :  width * 3 / 4
             color: "#38A0A2"
 
-            Image {
-                z: 1000
-                id: imageDisplay
-                fillMode: Image.PreserveAspectFit
-                anchors.fill: parent
-                source: "osb-logo-scale320x240.png"
-            }
+
+
+
+//            Image {
+//                z: 1000
+//                id: imageDisplay
+//                fillMode: Image.PreserveAspectFit
+//                anchors.fill: parent
+//                source: "osb-logo-scale320x240.png"
+//            }
 
             MouseArea {
                 anchors.fill: parent
@@ -116,6 +162,7 @@ Rectangle {
                 }
             }
         } // écran lcd
+        */
 
         Label {
             anchors.top: idLcdArea.bottom

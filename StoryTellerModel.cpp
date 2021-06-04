@@ -95,8 +95,9 @@ void StoryTellerModel::openFile()
 
 void StoryTellerModel::okButton()
 {
-    pack.OkButton();
-    ShowResources();
+    TestDecompress2();
+//    pack.OkButton();
+//    ShowResources();
 }
 
 void StoryTellerModel::previous()
@@ -144,7 +145,7 @@ void StoryTellerModel::initialize()
 {
     ScanPacks();
 //    TestDecompress();
-    TestDecompress2();
+//    TestDecompress2();
 }
 
 void StoryTellerModel::ShowResources()
@@ -462,6 +463,36 @@ end:
     finalImage.save("test_dec.bmp");
 }
 
+uint32_t x = 0, y = 0;
+void StoryTellerModel::WriteLine(uint8_t *decompressed, const uint8_t *palette, QPainter &painter, uint32_t width)
+{
+    for (uint32_t i = 0; i < 320; i++)
+    {
+        uint8_t val = decompressed[i];
+        if (val > 15)
+        {
+            std::cout << "Error!" << std::endl;
+        }
+        const uint8_t *palettePtr = &palette[val * 4];
+        QColor pixColor(palettePtr[0], palettePtr[1], palettePtr[2]);
+        painter.setPen(pixColor);
+        painter.drawPoint(x, y);
+
+        int r = palettePtr[0];
+        int g = palettePtr[1];
+        int b = palettePtr[2];
+
+        emit sigDrawPixel(r, g, b, x, y);
+
+        x++;
+        if (x >= width)
+        {
+            x = 0;
+            y++;
+        }
+    }
+}
+
 
 void StoryTellerModel::TestDecompress2()
 {
@@ -519,9 +550,19 @@ void StoryTellerModel::TestDecompress2()
 
   //  btea((uint32_t*) bmpImage, -128, key);
 
+    int nblines = 0;
+
     uint32_t pixel = 0; // specify the pixel offset
     bool end = false;
     uint32_t i = 0;
+
+    QImage img(width, height, QImage::Format_RGB32);
+   // QPixmap img(width, height);
+//    img.fill(QColor("#38A0A2"));
+    QPainter painter;
+
+    painter.begin(&img);
+
     do
     {
         // if we are behond the middle of the buffer, read more data from file
@@ -550,6 +591,7 @@ void StoryTellerModel::TestDecompress2()
                 }
                 pixel++;
             }
+
             i += 2; // jump pair instruction
         }
         else
@@ -565,6 +607,11 @@ void StoryTellerModel::TestDecompress2()
 
                     pixel += remaining;
                 }
+                nblines++;
+
+                WriteLine(decompressed, palette, painter, 320);
+                pixel = 0;
+
                 i += 2;
             }
             else if (second == 1)
@@ -616,7 +663,7 @@ void StoryTellerModel::TestDecompress2()
 
     if (end)
     {
-
+/*
         QImage img(width, height, QImage::Format_RGB32);
        // QPixmap img(width, height);
     //    img.fill(QColor("#38A0A2"));
@@ -644,7 +691,7 @@ void StoryTellerModel::TestDecompress2()
                 y++;
             }
         }
-
+*/
         painter.end();
 
     //    std::ofstream outfile ("new.txt", std::ofstream::binary);
